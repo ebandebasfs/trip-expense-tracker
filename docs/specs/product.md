@@ -20,7 +20,7 @@ The app has one role. Everyone who uses it registers an account.
 
 |Role|Description|Can do|
 |---|---|---|
-|User|Someone tracking a trip's shared spending|Register, log in and out; create and manage their own trips, people, expenses and payments|
+|User|Someone tracking a trip's shared spending|Register, log in and out; delete their own account; create and manage their own trips, people, expenses and payments|
 
 
 Ownership rule: a user can only see and change their own trips and everything in them. Being logged in is not enough; every action also checks that the trip belongs to the user.
@@ -53,7 +53,7 @@ Each feature gets its own spec in docs/specs/features/ and its own plan in docs/
 
 |#|Feature|What it includes|Done when|
 |---|---|---|---|
-|F1|Registration and login|Register with email and password, log in and out, hashed passwords; login and ownership checks on every trip endpoint|A logged-out visitor cannot reach any trip, and a user cannot see another user's trip|
+|F1|Registration and login|Register with email and password, log in and out, delete own account after re-entering password (removes all their trips), hashed passwords; login and ownership checks on every trip endpoint|A logged-out visitor cannot reach any trip, and a user cannot see another user's trip|
 |F2|Trips|Create a trip with a name, list your trips, delete a trip|A user sees only their own trips|
 |F3|People|Add and remove people on a trip|A person in any expense cannot be removed|
 |F4|Expenses|Add an expense with a description, amount, payer and participants (everyone by default); list and delete expenses|Each expense is split equally to the cent|
