@@ -181,15 +181,11 @@ Unit tests only (project rules). Each test name includes its AC ID.
 - 2026-11-17: Login error wording? → "Email or password is incorrect" for both cases.
 - 2026-11-17: Limit failed login attempts? → Out of scope for MVP.
 - 2026-11-17: Email case-insensitive? → Yes; same account.
-- 2026-11-17: Can a user delete their own account in F1? → Yes, delete account and all its trips. **Not in product.md**; a product.md edit is proposed (see below).
+- 2026-11-17: Can a user delete their own account in F1? → Yes, delete account and all its trips. Not in product.md at the time; the product.md edit was then applied.
 - 2026-11-17: Confirmation for account deletion? → Re-enter password.
-- 2026-11-17: Scope for account deletion? → Keep it; propose the product.md edit. Pending your agreement.
+- 2026-11-17: Scope for account deletion? → Keep it; the user agreed to the product.md edit.
 - 2026-11-17: Email format check? → Basic (one `@`, text both sides, dot in domain).
 - 2026-11-17: Password maximum length? → 128 characters.
 - 2026-11-17: Who writes the messages? → I propose the wording; the user reviews it.
 - 2026-11-17: Where is "Delete account"? → Account page, linked from the header.
 - 2026-11-17: Spec approved by the user. Status set to Approved. The product.md edit was approved and applied the same day.
-
-**Proposed product.md edit (not applied):**
-- MVP table, F1 "What it includes": add "delete own account after re-entering password, removing all their trips".
-- Roles table, User "Can do": add "delete their own account".

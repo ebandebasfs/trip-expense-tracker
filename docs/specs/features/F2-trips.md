@@ -84,7 +84,7 @@ Error shape for all errors: `{ "error": "<code>" }`. The UI maps codes to the co
 **Browser storage:** None. The session cookie is F1's.
 
 ## States & errors
-**Copy below is proposed by me and not yet approved (see Open questions).**
+**Copy below was approved by the user as written on 2026-11-17.**
 
 | State | What the user sees |
 |---|---|
@@ -170,9 +170,9 @@ Unit tests only (project rules). Each test name includes its AC ID.
 - Index on `trips.user_id` exists.
 
 ## Open questions
-- [ ] Approve the proposed copy in States & errors and the confirmation sentence in the flow. (I wrote it; you have not reviewed it.)
-- [ ] Large lists: is returning all trips in one response acceptable for MVP? Assumed yes; pagination is not in product.md.
-- [ ] Should "Trip page" (`/trips/:id`) show anything beyond the name in F2, or is a name-only placeholder fine until F3–F5?
+- [x] Copy in States & errors and the confirmation sentence in the flow: approved as written (2026-11-17).
+- [x] Large lists: all trips in one response is acceptable for MVP (2026-11-17). No pagination, no cap.
+- [x] Trip page (`/trips/:id`): name only until F3–F5 (2026-11-17).
 
 ## Decisions log
 - 2026-11-17: Trip name rules? → Required, trimmed, max 100 characters.
@@ -183,3 +183,6 @@ Unit tests only (project rules). Each test name includes its AC ID.
 - 2026-11-17: Response for another user's trip? → Not found, same as a missing trip.
 - 2026-11-17: Trip limit per user? → None.
 - 2026-11-17: Spec approved by the user. Status set to Approved. The three open questions above remain open (copy review, large lists, trip page content).
+- 2026-11-17: Copy final? → Final as written.
+- 2026-11-17: Large lists acceptable for MVP? → Yes, return all trips in one response.
+- 2026-11-17: Trip page content until F3–F5? → Name only.

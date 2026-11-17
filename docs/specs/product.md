@@ -2,7 +2,7 @@ L4 AI Training Product Requirements
 
 # Overview
 
-The Trip Expense Tracker is the sample app every developer builds in the L4 AI Developer Training Plan. A user registers, creates a trip, adds the people on it, and records who paid for what. The app shows what each person owes or is owed, and the fewest payments needed to settle up.
+The Trip Expense Tracker is the sample app every developer builds in the L4 AI Developer Training Plan. A user registers, creates a trip, adds the people on it, and records who paid for what. The app shows what each person owes or is owed, and a short list of suggested payments (R6) to settle up.
 
 The app has a frontend, a backend API and a database. The scope is kept small on purpose so the whole build fits the $15 training budget.
 
@@ -11,7 +11,7 @@ The app has a frontend, a backend API and a database. The scope is kept small on
 - A user can set up a trip and its people in a few steps.
 - Adding an expense takes four inputs: what, how much, who paid, who shares it.
 - Balances are always correct to the cent and always add up to zero.
-- Settling up needs as few payments as possible.
+- Settling up takes a short list of suggested payments (R6).
 - No user can see or change another user's trips.
 
 # Roles
@@ -35,6 +35,7 @@ People on a trip are names only. They do not have accounts.
 - Equal splits only. An expense is split equally between the people who share it.
 - No editing. Trips, people, expenses and payments can be added and deleted, not edited. A mistake is fixed by deleting and adding again.
 - Amounts are stored as whole cents, never as floating-point numbers.
+- Expenses have no date. They are listed by the order they were added.
 
 # Key terms
 
@@ -76,6 +77,9 @@ Code follows the basic logging rules: use the logger, never log sensitive data, 
 |R6|Suggested payments: the person who owes the most pays the person owed the most, repeated until all balances are zero.|
 |R7|A person cannot be removed while they are in any expense or payment.|
 |R8|Deleting a trip deletes everything in it, after the user confirms.|
+|R9|A person's name is 1–100 characters after leading and trailing spaces are trimmed. Names are unique within a trip, ignoring letter case.|
+|R10|An expense description is 1–100 characters after leading and trailing spaces are trimmed.|
+|R11|An expense amount is no more than 1,000,000.00.|
 
 ## Worked examples
 
