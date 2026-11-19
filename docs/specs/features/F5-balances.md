@@ -1,6 +1,6 @@
 # F5 — Balances
 
-_Status: Approved · Last updated: 2026-11-17 · Source: product.md — MVP scope (F5), Key terms (Balance), Business rules R4–R5, Worked examples 1–2, Assumptions (Amounts are whole cents), Ownership rule_
+_Status: Approved · Last updated: 2026-11-19 · Source: product.md — MVP scope (F5), Key terms (Balance), Business rules R4–R5, Worked examples 1–2, Assumptions (Amounts are whole cents), Ownership rule_
 
 ## Summary
 A logged-in user opens a trip and sees each person's balance: how much they are owed, how much they owe, or that they are even. The balances come from the expenses and people already on the trip. The app does not store balances; it works them out from the saved expenses, so they always match the shares the user saw. Balances update when an expense is added or deleted. All balances on a trip add up to exactly zero (R5). F6 (Settle up) uses these balances to suggest payments.
@@ -30,7 +30,7 @@ A logged-in user opens a trip and sees each person's balance: how much they are 
 ## User flow & screens
 1. The user opens a trip (`/trips/:id`). Below the Expenses section, the Balances section shows a loading message, then one row per person.
 2. Each row reads with the person's name first, then the balance. Examples: "Sam is owed 50.00", "Alex owes 10.00", "Jo is even".
-3. The user adds or deletes an expense in the Expenses section. The Balances section refreshes to the new figures. No message is shown for this change.
+3. The user adds or deletes an expense in the Expenses section, or adds or removes a person in the People section. The Balances section refreshes to the new figures without a page reload. A newly added person appears as "is even"; a removed person disappears. No message is shown for these changes.
 4. If the trip has no people, the Balances section shows a message in place of rows.
 5. If balances cannot be loaded, the section shows an error message and a "Try again" button. Retrying reloads the balances.
 
@@ -55,7 +55,7 @@ Screens: none in `docs/design` yet. The trip page layout is the one F2–F4 defi
 - **F5.R10** The balances are read-only. No request in this feature changes an expense, a person or a payment.
 - **F5.R11** When the trip has no people, the section shows "Add people to this trip to see balances." instead of rows. No balance row is shown.
 - **F5.R12** When balances cannot be loaded, the section shows "Could not load balances. Try again." with a "Try again" button. The section does not show stale or partial figures.
-- **F5.R13** After an expense is added or deleted, the Balances section shows the new figures without a page reload. No message is shown.
+- **F5.R13** After an expense is added or deleted, or a person is added or removed, the Balances section shows the new figures without a page reload. A newly added person shows as "is even". A removed person no longer appears. No message is shown.
 
 ## Data & contract
 **No new tables.** Balances are read from `people`, `expenses` (F4) and `expense_shares` (F4). The payments term is read from `payments` once F6 creates that table; until then it is treated as zero.
@@ -117,7 +117,7 @@ Screens: none in `docs/design` yet. The trip page layout is the one F2–F4 defi
 - **F5.AC4** Given a balance of 50.00, when the row is shown, then it reads "is owed 50.00". Given a balance of −10.00, then it reads "owes 10.00". Given a balance of zero, then it reads "is even" with no amount. _(F5.R4)_
 - **F5.AC5** Given a trip with people and no expenses, when the balances are shown, then every person is shown as "is even". _(F5.R7)_
 - **F5.AC6** Given a trip with no people, when the Balances section loads, then it shows "Add people to this trip to see balances." and no rows. _(F5.R11)_
-- **F5.AC7** Given a user adds or deletes an expense, when the change is saved, then the Balances section shows the new figures without a page reload. _(F5.R13)_
+- **F5.AC7** Given a user adds or deletes an expense, or adds or removes a person, when the change is saved, then the Balances section shows the new figures without a page reload. A newly added person shows as "is even", and a removed person no longer appears. _(F5.R13)_
 - **F5.AC8** Given the balances request fails, when the section is shown, then it shows "Could not load balances. Try again." with a "Try again" button and no rows. _(F5.R12)_
 - **F5.AC9** Given a trip that is not owned by the logged-in user, when its balances are requested, then the response is "not found", and no balances are shown. _(F5.R9; checked by code review)_
 - **F5.AC10** Given a person is removed and re-added, when the balances are shown, then the new person starts at zero. _(Edge cases; F3)_
@@ -164,3 +164,5 @@ Unit tests only (project rules), mapped to AC IDs. Ownership and the not-found r
 - 2026-11-17: API route? → `GET /api/trips/:id/balances`.
 - 2026-11-17: Payment term before F6? → Counted as zero until F6 adds payments.
 - 2026-11-17: Spec approved by the user; status set to Approved.
+- 2026-11-19: Adding or removing a person refreshes the Balances section without a page reload, with no message (a new person shows as "is even", a removed person disappears)? → Yes. F5.R13, User flow step 3 and F5.AC7 updated. Nothing else changed. Substance changed, so status set back to Draft; the plan in docs/plans/ may need updating.
+- 2026-11-19: Spec approved by the user; status set back to Approved.
