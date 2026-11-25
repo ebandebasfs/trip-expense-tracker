@@ -132,6 +132,11 @@ export function createApiClient(options: ApiClientOptions = {}) {
       return readSuccessJson<AuthUser>(await send('POST', '/login', { email, password }));
     },
 
+    /** Returns the logged-in user. A 401 with no session sends the visitor to Log in (F1.AC10). */
+    async me(): Promise<AuthUser> {
+      return readSuccessJson<AuthUser>(await send('GET', '/me'));
+    },
+
     /** Ends the session (F1.R9). */
     async logout(): Promise<void> {
       await send('POST', '/logout');

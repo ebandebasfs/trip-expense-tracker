@@ -55,6 +55,25 @@ describe('api-client', () => {
     expect(fetchImpl.mock.calls[0][1]).toEqual(expect.objectContaining({ credentials: 'same-origin' }));
   });
 
+  it('F1.AC10 me gets /api/me same-origin and returns the user', async () => {
+    const user = { id: 'u1', email: 'name@example.com' };
+    const { client, fetchImpl } = setup(fakeResponse(200, user));
+
+    await expect(client.me()).resolves.toEqual(user);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/me',
+      expect.objectContaining({ method: 'GET', credentials: 'same-origin', body: undefined }),
+    );
+  });
+
+  it('F1.AC10 me with no session sends the visitor to Log in with no message', async () => {
+    const { client, redirectToLogin } = setup(fakeResponse(401));
+
+    await expect(client.me()).rejects.toMatchObject({ status: 401, sessionExpired: true, message: '' });
+    expect(redirectToLogin).toHaveBeenCalledTimes(1);
+  });
+
   it('F1.AC7 logout and account deletion accept a 204 with no body', async () => {
     const { client, fetchImpl } = setup(fakeResponse(204), fakeResponse(204));
 
