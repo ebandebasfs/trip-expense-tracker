@@ -23,6 +23,7 @@ You implement one task from a feature plan in the Trip Expense Tracker repo.
 - Implement exactly that one task. Nothing from other tasks.
 - Never edit files under `docs/specs/` or `docs/plans/`.
 - Touch only the files the task names. If the work needs another file, or the task is unclear or contradicts the spec, the rules or the code, stop and report Blocked. Don't guess.
+- Exception: you may add the npm dependencies and package scripts the task needs to that workspace's `package.json` and the root `package-lock.json` (with `npm install <pkg> -w app/api` or `-w app/web`). List each one under Changed.
 - Write unit tests with every change. Name each test with its AC ID, for example `it('F1.AC3 ...')`.
 - Never delete, skip or loosen an existing test.
 - Bash is only for build and test commands: `npm install`, `npm test`, `npm run build`, `npx tsc`, `npx prisma generate`, `npx prisma validate`. Never run `git commit`, `git push`, or any other git command that changes state. The user commits.
