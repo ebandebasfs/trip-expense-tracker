@@ -1,5 +1,13 @@
+import { Inject, Injectable } from '@nestjs/common';
 import { checkPassword, isValidEmail, normalizeEmail } from '../domain/account-rules';
 import type { AuthLogger } from './auth-logger';
+import {
+  AUTH_LOGGER,
+  PASSWORD_HASHER,
+  SESSION_REPOSITORY,
+  UNIT_OF_WORK,
+  USER_REPOSITORY,
+} from './auth.tokens';
 import type { PasswordHasher } from './password-hasher';
 import { createSessionToken, hashToken } from './session-token';
 import { DuplicateEmailError, type UserRepository } from './user.repository';
@@ -46,13 +54,14 @@ function fail(error: string, field: AuthField): AuthFailure {
   return { ok: false, error, field };
 }
 
+@Injectable()
 export class AuthService {
   constructor(
-    private readonly users: UserRepository,
-    private readonly sessions: SessionRepository,
-    private readonly hasher: PasswordHasher,
-    private readonly unitOfWork: UnitOfWork,
-    private readonly logger: AuthLogger,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
+    @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
+    @Inject(UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork,
+    @Inject(AUTH_LOGGER) private readonly logger: AuthLogger,
   ) {}
 
   /** Registers a new account and logs it in (F1.R1, R2, R3, R5, R6). */

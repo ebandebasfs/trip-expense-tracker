@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { hashToken } from './session-token';
-import { SESSION_REPOSITORY } from './auth.module';
+import { SESSION_REPOSITORY } from './auth.tokens';
 import { readSessionToken } from './session-cookie';
 import type { SessionRepository } from './session.repository';
 
