@@ -12,4 +12,12 @@ export class PrismaSessionRepository implements SessionRepository {
       data: { userId: session.userId, tokenHash: session.tokenHash },
     });
   }
+
+  async findUserIdByTokenHash(tokenHash: string): Promise<string | null> {
+    const session = await this.prisma.session.findUnique({
+      where: { tokenHash },
+      select: { userId: true },
+    });
+    return session?.userId ?? null;
+  }
 }

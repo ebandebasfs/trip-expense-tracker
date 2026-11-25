@@ -7,4 +7,6 @@ export interface NewSession {
 export interface SessionRepository {
   /** Saves a new session row for a user. */
   create(session: NewSession): Promise<void>;
+  /** Returns the user ID that owns the session with this token hash, or null when there is none. */
+  findUserIdByTokenHash(tokenHash: string): Promise<string | null>;
 }

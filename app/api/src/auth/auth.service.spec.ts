@@ -43,6 +43,10 @@ class FakeSessionRepository implements SessionRepository {
   async create(session: NewSession): Promise<void> {
     this.sessions.push(session);
   }
+
+  async findUserIdByTokenHash(tokenHash: string): Promise<string | null> {
+    return this.sessions.find((s) => s.tokenHash === tokenHash)?.userId ?? null;
+  }
 }
 
 /** Removes every item that matches, in place, so the fake arrays keep their identity. */
