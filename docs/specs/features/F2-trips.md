@@ -1,6 +1,6 @@
 # F2 — Trips
 
-_Status: Approved · Last updated: 2026-11-17 · Source: product.md — MVP scope (F2), Roles, Key terms, Business rules R8, Ownership rule_
+_Status: Approved · Last updated: 2026-11-25 · Source: product.md — MVP scope (F2), Roles, Key terms, Business rules R8, Ownership rule_
 
 ## Summary
 A logged-in user creates a trip with a name, sees a list of their own trips, and deletes a trip after confirming. Trips are the top-level container for people (F3), expenses (F4), balances (F5) and settle-up (F6). This feature is the first to use the F1 login check on trip data, and every trip request is also checked for ownership.
@@ -75,11 +75,11 @@ Index on `user_id` so the list query is fast. No unique constraint on `name` (F2
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
 | GET | `/api/trips` | none | 200 `{ "trips": [{ "id", "name", "createdAt" }] }`, newest first | 401 not logged in |
-| POST | `/api/trips` | `{ "name": string }` | 201 `{ "trip": { "id", "name", "createdAt" } }` | 400 `{ "error": "name_required" \| "name_too_long" }`; 401 |
-| GET | `/api/trips/:id` | none | 200 `{ "trip": { "id", "name", "createdAt" } }` | 404 `{ "error": "not_found" }` (also for other users' trips); 401 |
-| DELETE | `/api/trips/:id` | none | 204 | 404 `{ "error": "not_found" }`; 401 |
+| POST | `/api/trips` | `{ "name": string }` | 201 `{ "trip": { "id", "name", "createdAt" } }` | 400 `{ "error": "name_required" \| "name_too_long", "field": "name" }`; 401 |
+| GET | `/api/trips/:id` | none | 200 `{ "trip": { "id", "name", "createdAt" } }` | 404 `{ "error": "not_found", "field": null }` (also for other users' trips); 401 |
+| DELETE | `/api/trips/:id` | none | 204 | 404 `{ "error": "not_found", "field": null }`; 401 |
 
-Error shape for all errors: `{ "error": "<code>" }`. The UI maps codes to the copy in States & errors. The API never returns 403 for trips (F2.R9).
+Error shape for all errors: `{ "error": "<code>", "field": "name" | null }`. `error` is the code the UI maps to the copy in States & errors. `field` is `"name"` for name errors (400) and `null` for `not_found` (404). This is F1's error shape, so the web client's 401 rule keeps working (see Decisions log, 2026-11-25). The API never returns 403 for trips (F2.R9).
 
 **Browser storage:** None. The session cookie is F1's.
 
@@ -186,3 +186,4 @@ Unit tests only (project rules). Each test name includes its AC ID.
 - 2026-11-17: Copy final? → Final as written.
 - 2026-11-17: Large lists acceptable for MVP? → Yes, return all trips in one response.
 - 2026-11-17: Trip page content until F3–F5? → Name only.
+- 2026-11-25: Error body shape in the API section? → `{ "error", "field" }`, the same shape F1 uses. Name errors (400) set `field: "name"`; `not_found` (404) sets `field: null`. Reason: the web client treats a 401 with no `field` as "not logged in", and F1's client relies on that shape, so F2 keeps it. This is an addition to the API section only: no change to copy, behaviour, rules or ACs. Status stays Approved because the plan (`docs/plans/F2-trips.md`) was already written against this shape.
