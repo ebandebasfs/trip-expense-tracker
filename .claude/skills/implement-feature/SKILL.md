@@ -47,6 +47,7 @@ Do not trust the agent's report alone.
 
 - Rerun each command in the task's Done when line yourself.
 - Skip any command that starts a long-running server (`npm run dev`). List it as a manual check for the user.
+- A test command that reports "No tests found" or 0 tests run is a failure, not a pass, unless the task's Covers line says it has no ACs.
 - Show:
   - the agent's report, unchanged;
   - the test command and its result: pass or fail, and the names of any failing tests;
