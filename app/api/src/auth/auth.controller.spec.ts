@@ -6,7 +6,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
+import { GUARDS_METADATA, HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import {
   AuthController,
   type CookieRequest,
@@ -17,13 +17,14 @@ import {
   type AuthFailure,
   type AuthResult,
   type AuthService,
+  type AuthUser,
   DELETE_PASSWORD_WRONG_MESSAGE,
   type DeleteAccountResult,
   EMAIL_TAKEN_MESSAGE,
   LOGIN_FAILED_MESSAGE,
 } from './auth.service';
 import { SESSION_COOKIE_NAME, type SessionCookieOptions } from './session-cookie';
-import type { AuthenticatedRequest } from './session.guard';
+import { type AuthenticatedRequest, SessionGuard } from './session.guard';
 
 interface CookieCall {
   name: string;
@@ -81,6 +82,15 @@ class FakeAuthService {
   async deleteAccount(userId: string, password: string): Promise<DeleteAccountResult> {
     this.deleteCalls.push([userId, password]);
     return this.deleteResult;
+  }
+
+  /** The user returned for GET /me. Null means the user no longer exists. */
+  currentUserResult: AuthUser | null = { id: 'user-1', email: 'sam@example.com' };
+  readonly currentUserCalls: string[] = [];
+
+  async currentUser(userId: string): Promise<AuthUser | null> {
+    this.currentUserCalls.push(userId);
+    return this.currentUserResult;
   }
 
   asService(): AuthService {
@@ -231,6 +241,36 @@ describe('AuthController', () => {
       controller.deleteAccount(request, { password: 'eight888' }, response),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(auth.deleteCalls).toEqual([]);
+  });
+
+  it('F1.AC10 me returns the signed-in user id and email, never a password hash', async () => {
+    const request: AuthenticatedRequest = { headers: { cookie: 'session=token-1' }, userId: 'user-1' };
+
+    const user = await controller.me(request);
+
+    expect(user).toEqual({ id: 'user-1', email: 'sam@example.com' });
+    expect(user).not.toHaveProperty('passwordHash');
+    expect(auth.currentUserCalls).toEqual(['user-1']);
+  });
+
+  it('F1.AC10 me throws 401 with no data when the user no longer exists', async () => {
+    auth.currentUserResult = null;
+    const request: AuthenticatedRequest = { headers: { cookie: 'session=token-1' }, userId: 'user-1' };
+
+    await expect(controller.me(request)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(auth.currentUserCalls).toEqual(['user-1']);
+  });
+
+  it('F1.AC10 me throws 401 and calls no service method when no user ID reached the handler', async () => {
+    const request: AuthenticatedRequest = { headers: {} };
+
+    await expect(controller.me(request)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(auth.currentUserCalls).toEqual([]);
+  });
+
+  it('F1.AC10 me is guarded by SessionGuard', () => {
+    const guards: unknown = Reflect.getMetadata(GUARDS_METADATA, AuthController.prototype.me);
+    expect(guards).toEqual([SessionGuard]);
   });
 
   it('F1.AC14 session cookies are HttpOnly with no Expires or Max-Age, when set and when cleared', async () => {

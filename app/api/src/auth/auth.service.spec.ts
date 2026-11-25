@@ -302,6 +302,31 @@ describe('AuthService', () => {
     });
   });
 
+  describe('currentUser', () => {
+    it('F1.AC10 returns only the id and email of an existing user, never the password hash', async () => {
+      const registered = await service.register('sam@example.com', 'password1');
+      if (!registered.ok) throw new Error('setup failed');
+
+      const user = await service.currentUser(registered.user.id);
+
+      expect(user).toEqual({ id: registered.user.id, email: 'sam@example.com' });
+      expect(JSON.stringify(user)).not.toContain(users.users[0].passwordHash);
+      expect(user).not.toHaveProperty('passwordHash');
+    });
+
+    it('F1.AC10 returns null when the user no longer exists', async () => {
+      const registered = await service.register('sam@example.com', 'password1');
+      if (!registered.ok) throw new Error('setup failed');
+      await service.deleteAccount(registered.user.id, 'password1');
+
+      await expect(service.currentUser(registered.user.id)).resolves.toBeNull();
+    });
+
+    it('F1.AC10 returns null for an unknown user id', async () => {
+      await expect(service.currentUser('no-such-user')).resolves.toBeNull();
+    });
+  });
+
   describe('logging', () => {
     const PASSWORD = 'password1';
     const WRONG_PASSWORD = 'wrong-password';

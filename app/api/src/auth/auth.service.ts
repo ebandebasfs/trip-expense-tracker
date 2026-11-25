@@ -149,6 +149,18 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * Looks up the signed-in user for GET /me (F1.R10). Returns only id and email, never the
+   * password hash. Returns null when the user no longer exists.
+   */
+  async currentUser(userId: string): Promise<AuthUser | null> {
+    const user = await this.unitOfWork.findUserById(userId);
+    if (user === null) {
+      return null;
+    }
+    return { id: user.id, email: user.email };
+  }
+
   private async startSession(userId: string, email: string): Promise<AuthSuccess> {
     const token = createSessionToken();
     await this.sessions.create({ userId, tokenHash: hashToken(token) });

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -151,6 +152,25 @@ export class AuthController {
       throw toHttpException(result);
     }
     res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions());
+  }
+
+  /**
+   * Returns the signed-in user's id and email (F1.R10). The guard rejects requests with no
+   * valid session. A user who no longer exists gets 401 with no data.
+   */
+  @Get('me')
+  @UseGuards(SessionGuard)
+  async me(@Req() request: AuthenticatedRequest): Promise<AuthUser> {
+    // The guard sets userId on every request that reaches this handler.
+    const userId = request.userId;
+    if (userId === undefined) {
+      throw new UnauthorizedException();
+    }
+    const user = await this.guarded('me', () => this.auth.currentUser(userId));
+    if (user === null) {
+      throw new UnauthorizedException();
+    }
+    return user;
   }
 
   /**
