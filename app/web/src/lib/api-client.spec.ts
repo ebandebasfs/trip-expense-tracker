@@ -147,6 +147,124 @@ describe('api-client', () => {
     });
   });
 
+  it('F2.AC1 createTrip posts the name same-origin to /api/trips and returns the new trip', async () => {
+    const trip = { id: 'trip-1', name: 'Lisbon', createdAt: '2026-11-25T10:00:00.000Z' };
+    const { client, fetchImpl } = setup(fakeResponse(201, { trip }));
+
+    const created = await client.createTrip('Lisbon');
+    expect(created).toEqual(trip);
+    expect(created).not.toHaveProperty('trip');
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/trips',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Lisbon' }),
+      }),
+    );
+  });
+
+  it('F2.AC3 a 400 name_required error reaches the form with the name field', async () => {
+    const { client } = setup(fakeResponse(400, { error: 'name_required', field: 'name' }));
+
+    await expect(client.createTrip('   ')).rejects.toMatchObject({
+      status: 400,
+      message: 'name_required',
+      field: 'name',
+    });
+  });
+
+  it('F2.AC4 a 400 name_too_long error reaches the form with the name field', async () => {
+    const { client } = setup(fakeResponse(400, { error: 'name_too_long', field: 'name' }));
+
+    await expect(client.createTrip('a'.repeat(101))).rejects.toMatchObject({
+      status: 400,
+      message: 'name_too_long',
+      field: 'name',
+    });
+  });
+
+  it('F2.AC6 listTrips gets /api/trips same-origin and returns the list', async () => {
+    const trips = [{ id: 'trip-2', name: 'Porto', createdAt: '2026-11-25T11:00:00.000Z' }];
+    const { client, fetchImpl } = setup(fakeResponse(200, { trips }));
+
+    const listed = await client.listTrips();
+    expect(listed).toEqual(trips);
+    expect(listed).not.toHaveProperty('trips');
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/trips',
+      expect.objectContaining({ method: 'GET', credentials: 'same-origin', body: undefined }),
+    );
+  });
+
+  it('F2.AC6 listTrips with no session sends the visitor to Log in with no message', async () => {
+    const { client, redirectToLogin } = setup(fakeResponse(401, { message: 'Unauthorized', statusCode: 401 }));
+
+    await expect(client.listTrips()).rejects.toMatchObject({
+      status: 401,
+      sessionExpired: true,
+      message: '',
+    });
+    expect(redirectToLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it('F2.AC9 deleteTrip sends DELETE to /api/trips/:id same-origin and accepts a 204', async () => {
+    const { client, fetchImpl } = setup(fakeResponse(204));
+
+    await expect(client.deleteTrip('trip-1')).resolves.toBeUndefined();
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/trips/trip-1',
+      expect.objectContaining({ method: 'DELETE', credentials: 'same-origin' }),
+    );
+  });
+
+  it('F2.AC9 a failed deleteTrip rejects with the server error code', async () => {
+    const { client } = setup(fakeResponse(404, { error: 'not_found', field: null }));
+
+    await expect(client.deleteTrip('trip-1')).rejects.toMatchObject({
+      status: 404,
+      message: 'not_found',
+      field: null,
+    });
+  });
+
+  it('F2.AC11 getTrip gets /api/trips/:id same-origin and returns the trip', async () => {
+    const trip = { id: 'trip-1', name: 'Lisbon', createdAt: '2026-11-25T10:00:00.000Z' };
+    const { client, fetchImpl } = setup(fakeResponse(200, { trip }));
+
+    const fetched = await client.getTrip('trip-1');
+    expect(fetched).toEqual(trip);
+    expect(fetched).not.toHaveProperty('trip');
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/trips/trip-1',
+      expect.objectContaining({ method: 'GET', credentials: 'same-origin' }),
+    );
+  });
+
+  it('F2.AC11 getTrip for another user\'s trip rejects with not_found and no trip data', async () => {
+    const { client, redirectToLogin } = setup(fakeResponse(404, { error: 'not_found', field: null }));
+
+    const failure = await client.getTrip('trip-of-user-a').catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(failure).toMatchObject({ status: 404, message: 'not_found', field: null, sessionExpired: false });
+    expect(redirectToLogin).not.toHaveBeenCalled();
+  });
+
+  it('F2.AC11 deleteTrip for another user\'s trip rejects with not_found', async () => {
+    const { client } = setup(fakeResponse(404, { error: 'not_found', field: null }));
+
+    await expect(client.deleteTrip('trip-of-user-a')).rejects.toMatchObject({
+      status: 404,
+      message: 'not_found',
+    });
+  });
+
   it('F1.AC7 a 500 with a non-JSON body shows the generic message with no detail', async () => {
     const { client, redirectToLogin } = setup(fakeResponse(500));
 

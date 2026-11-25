@@ -14,6 +14,13 @@ export interface AuthUser {
   email: string;
 }
 
+/** A trip as the list and trip page see it (F2.R6, F2.R9). */
+export interface Trip {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 /** A failed call. `sessionExpired` means the visitor was sent to Log in with no message. */
 export class ApiError extends Error {
   readonly status: number;
@@ -53,7 +60,10 @@ function isAuthFailureBody(value: unknown): value is AuthFailureBody {
     return false;
   }
   const { error, field } = value as { error?: unknown; field?: unknown };
-  return typeof error === 'string' && (field === null || field === 'email' || field === 'password');
+  return (
+    typeof error === 'string' &&
+    (field === null || field === 'email' || field === 'password' || field === 'name')
+  );
 }
 
 async function readJsonOrNull(response: Response): Promise<unknown> {
@@ -145,6 +155,31 @@ export function createApiClient(options: ApiClientOptions = {}) {
     /** Deletes the account after the password check (F1.R11). */
     async deleteAccount(password: string): Promise<void> {
       await send('DELETE', '/account', { password });
+    },
+
+    /** Lists the visitor's trips, newest first (F2.AC6). A 401 with no session redirects to Log in. */
+    async listTrips(): Promise<Trip[]> {
+      const body = await readSuccessJson<{ trips: Trip[] }>(await send('GET', '/trips'));
+      return body.trips;
+    },
+
+    /** Creates a trip for the logged-in user (F2.AC1). A bad name rejects with field "name". */
+    async createTrip(name: string): Promise<Trip> {
+      const body = await readSuccessJson<{ trip: Trip }>(await send('POST', '/trips', { name }));
+      return body.trip;
+    },
+
+    /** Gets one of the visitor's trips. Another user's trip is 404 not_found (F2.AC11). */
+    async getTrip(id: string): Promise<Trip> {
+      const body = await readSuccessJson<{ trip: Trip }>(
+        await send('GET', `/trips/${encodeURIComponent(id)}`),
+      );
+      return body.trip;
+    },
+
+    /** Deletes one of the visitor's trips (F2.AC9). Another user's trip is 404 not_found (F2.AC11). */
+    async deleteTrip(id: string): Promise<void> {
+      await send('DELETE', `/trips/${encodeURIComponent(id)}`);
     },
   };
 }

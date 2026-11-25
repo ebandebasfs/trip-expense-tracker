@@ -12,7 +12,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 /** The input a message belongs to. `null` means a form-level message. */
-export type ValidationField = 'email' | 'password' | null;
+export type ValidationField = 'email' | 'password' | 'name' | null;
 
 export interface ValidationError {
   field: ValidationField;
