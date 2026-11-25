@@ -1,6 +1,8 @@
+import type { AuthEvent, AuthLogger } from './auth-logger';
 import type { PasswordHasher } from './password-hasher';
 import {
   AuthService,
+  DELETE_PASSWORD_EMPTY_MESSAGE,
   DELETE_PASSWORD_WRONG_MESSAGE,
   EMAIL_TAKEN_MESSAGE,
   LOGIN_FAILED_MESSAGE,
@@ -89,19 +91,31 @@ class FakePasswordHasher implements PasswordHasher {
   }
 }
 
+/** Fake logger that records every call so tests can check what was logged. */
+class FakeAuthLogger implements AuthLogger {
+  readonly calls: { event: AuthEvent; userId?: string }[] = [];
+
+  log(event: AuthEvent, userId?: string): void {
+    this.calls.push({ event, userId });
+  }
+}
+
 describe('AuthService', () => {
   let users: FakeUserRepository;
   let sessions: FakeSessionRepository;
+  let logger: FakeAuthLogger;
   let service: AuthService;
 
   beforeEach(() => {
     users = new FakeUserRepository();
     sessions = new FakeSessionRepository();
+    logger = new FakeAuthLogger();
     service = new AuthService(
       users,
       sessions,
       new FakePasswordHasher(),
       new FakeUnitOfWork(users, sessions),
+      logger,
     );
   });
 
@@ -265,6 +279,86 @@ describe('AuthService', () => {
       expect(result).toEqual({ ok: true });
       expect(users.users).toHaveLength(0);
       expect(sessions.sessions).toHaveLength(0);
+    });
+
+    it('F1.AC12 empty password returns the empty-password message and deletes nothing', async () => {
+      const usersBefore = [...users.users];
+      const sessionsBefore = [...sessions.sessions];
+
+      const result = await service.deleteAccount(userId, '');
+
+      expect(result).toEqual({
+        ok: false,
+        error: DELETE_PASSWORD_EMPTY_MESSAGE,
+        field: 'password',
+      });
+      expect(DELETE_PASSWORD_EMPTY_MESSAGE).toBe('Enter your password to delete your account.');
+      expect(users.users).toEqual(usersBefore);
+      expect(sessions.sessions).toEqual(sessionsBefore);
+    });
+  });
+
+  describe('logging', () => {
+    const PASSWORD = 'password1';
+    const WRONG_PASSWORD = 'wrong-password';
+    const EMAIL = 'sam@example.com';
+
+    it('F1.AC15 logs each account event with the user ID only', async () => {
+      const registered = await service.register(EMAIL, PASSWORD);
+      expect(registered.ok).toBe(true);
+      await service.login(EMAIL, PASSWORD);
+      await service.login(EMAIL, WRONG_PASSWORD);
+      await service.login('nobody@example.com', PASSWORD);
+      if (!registered.ok) return;
+      await service.logout(registered.token);
+      await service.deleteAccount(registered.user.id, PASSWORD);
+
+      expect(logger.calls).toEqual([
+        { event: 'register', userId: 'user-1' },
+        { event: 'login', userId: 'user-1' },
+        { event: 'login_failed', userId: 'user-1' },
+        { event: 'login_failed' },
+        { event: 'logout' },
+        { event: 'delete_account', userId: 'user-1' },
+      ]);
+    });
+
+    it('F1.AC15 no password, session token, token hash or email appears in any logged call', async () => {
+      const registered = await service.register(EMAIL, PASSWORD);
+      if (!registered.ok) throw new Error('setup failed');
+      const loggedIn = await service.login(EMAIL, PASSWORD);
+      if (!loggedIn.ok) throw new Error('setup failed');
+      const storedHash = users.users[0].passwordHash;
+      await service.login(EMAIL, WRONG_PASSWORD);
+      await service.logout(registered.token);
+      await service.deleteAccount(registered.user.id, PASSWORD);
+
+      const logged = JSON.stringify(logger.calls);
+      const secrets = [
+        PASSWORD,
+        WRONG_PASSWORD,
+        EMAIL,
+        registered.token,
+        loggedIn.token,
+        hashToken(registered.token),
+        hashToken(loggedIn.token),
+        storedHash,
+      ];
+      for (const secret of secrets) {
+        expect(logged).not.toContain(secret);
+      }
+      expect(logger.calls.length).toBeGreaterThan(0);
+    });
+
+    it('F1.AC15 failed delete with a wrong or empty password logs nothing', async () => {
+      const registered = await service.register(EMAIL, PASSWORD);
+      if (!registered.ok) throw new Error('setup failed');
+      logger.calls.length = 0;
+
+      await service.deleteAccount(registered.user.id, WRONG_PASSWORD);
+      await service.deleteAccount(registered.user.id, '');
+
+      expect(logger.calls).toEqual([]);
     });
   });
 });

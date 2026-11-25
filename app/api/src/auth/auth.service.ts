@@ -1,4 +1,5 @@
 import { checkPassword, isValidEmail, normalizeEmail } from '../domain/account-rules';
+import type { AuthLogger } from './auth-logger';
 import type { PasswordHasher } from './password-hasher';
 import { createSessionToken, hashToken } from './session-token';
 import { DuplicateEmailError, type UserRepository } from './user.repository';
@@ -10,6 +11,7 @@ export const EMAIL_INVALID_MESSAGE = 'Enter a valid email address, such as name@
 export const EMAIL_TAKEN_MESSAGE = 'This email is already registered.';
 export const LOGIN_EMPTY_MESSAGE = 'Enter your email and password.';
 export const LOGIN_FAILED_MESSAGE = 'Email or password is incorrect.';
+export const DELETE_PASSWORD_EMPTY_MESSAGE = 'Enter your password to delete your account.';
 export const DELETE_PASSWORD_WRONG_MESSAGE = 'Password is incorrect. Your account was not deleted.';
 
 export interface DeleteAccountSuccess {
@@ -50,6 +52,7 @@ export class AuthService {
     private readonly sessions: SessionRepository,
     private readonly hasher: PasswordHasher,
     private readonly unitOfWork: UnitOfWork,
+    private readonly logger: AuthLogger,
   ) {}
 
   /** Registers a new account and logs it in (F1.R1, R2, R3, R5, R6). */
@@ -73,7 +76,9 @@ export class AuthService {
     const passwordHash = await this.hasher.hash(password);
     try {
       const user = await this.users.create({ email: normalized, passwordHash });
-      return this.startSession(user.id, user.email);
+      const result = await this.startSession(user.id, user.email);
+      this.logger.log('register', user.id);
+      return result;
     } catch (error) {
       // Two sign-ups with the same email at once: the unique rule blocks the second.
       if (error instanceof DuplicateEmailError) {
@@ -95,18 +100,23 @@ export class AuthService {
 
     const user = await this.users.findByEmail(normalized);
     if (user === null) {
+      this.logger.log('login_failed');
       return fail(LOGIN_FAILED_MESSAGE, null);
     }
     const matches = await this.hasher.verify(password, user.passwordHash);
     if (!matches) {
+      this.logger.log('login_failed', user.id);
       return fail(LOGIN_FAILED_MESSAGE, null);
     }
-    return this.startSession(user.id, user.email);
+    const result = await this.startSession(user.id, user.email);
+    this.logger.log('login', user.id);
+    return result;
   }
 
   /** Ends the session for this token on the server (F1.R9). Only the token hash is looked up. */
   async logout(token: string): Promise<void> {
     await this.unitOfWork.deleteSessionByTokenHash(hashToken(token));
+    this.logger.log('logout');
   }
 
   /**
@@ -114,6 +124,9 @@ export class AuthService {
    * deletes nothing. Sessions and all other data go through database cascades.
    */
   async deleteAccount(userId: string, password: string): Promise<DeleteAccountResult> {
+    if (password === '') {
+      return fail(DELETE_PASSWORD_EMPTY_MESSAGE, 'password');
+    }
     const user = await this.unitOfWork.findUserById(userId);
     if (user === null) {
       return fail(DELETE_PASSWORD_WRONG_MESSAGE, 'password');
@@ -123,6 +136,7 @@ export class AuthService {
       return fail(DELETE_PASSWORD_WRONG_MESSAGE, 'password');
     }
     await this.unitOfWork.deleteUser(user.id);
+    this.logger.log('delete_account', user.id);
     return { ok: true };
   }
 
