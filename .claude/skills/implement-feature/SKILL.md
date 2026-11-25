@@ -37,6 +37,7 @@ Call the `developer` agent (Agent tool, `subagent_type: developer`). Send only:
 
 - the task ID and title, and its Files, Does, Covers and Done when lines, copied exactly from the plan;
 - the text of each AC and rule the task covers, copied from the spec;
+- the rows of the spec's API table for every endpoint the task builds or calls, copied exactly, including request and response bodies and error shapes;
 - the spec path and the plan path.
 
 Never send the whole plan.
