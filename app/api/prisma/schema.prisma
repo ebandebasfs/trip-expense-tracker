@@ -16,6 +16,7 @@ model User {
   passwordHash String
   createdAt    DateTime  @default(now())
   sessions     Session[]
+  trips        Trip[]
 }
 
 model Session {
@@ -25,4 +26,17 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model Trip {
+  id        String   @id @default(uuid())
+  // Owner, set by the server from the logged-in session. Never taken from the request.
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // No unique constraint: two trips of the same user may share a name.
+  name      String
+  // UTC, set on insert.
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
