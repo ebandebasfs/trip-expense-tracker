@@ -28,6 +28,6 @@ import { PrismaService } from '../prisma/prisma.service';
     AuthService,
     SessionGuard,
   ],
-  exports: [USER_REPOSITORY, SESSION_REPOSITORY],
+  exports: [USER_REPOSITORY, SESSION_REPOSITORY, PrismaService, SessionGuard],
 })
 export class AuthModule {}
