@@ -1,5 +1,16 @@
+import { Logger } from '@nestjs/common';
+import { NestTripLogger, type TripLogEvent, type TripLogger } from './trip-logger';
 import type { TripRecord, TripRepository } from './trip.repository';
 import { TripError, TripsService } from './trips.service';
+
+/** Fake TripLogger that records every call. */
+class FakeTripLogger implements TripLogger {
+  readonly events: TripLogEvent[] = [];
+
+  log(event: TripLogEvent): void {
+    this.events.push({ ...event });
+  }
+}
 
 /** In-memory TripRepository. Timestamps are fixed and advance one second per insert. */
 class FakeTripRepository implements TripRepository {
@@ -46,8 +57,9 @@ describe('TripsService', () => {
 
   function setup() {
     const repo = new FakeTripRepository();
-    const service = new TripsService(repo);
-    return { repo, service };
+    const logger = new FakeTripLogger();
+    const service = new TripsService(repo, logger);
+    return { repo, logger, service };
   }
 
   describe('create', () => {
@@ -183,6 +195,71 @@ describe('TripsService', () => {
       const { service } = setup();
 
       await expect(service.delete(ALICE, 'missing')).rejects.toMatchObject({ code: 'not_found' });
+    });
+  });
+
+  describe('logging', () => {
+    const SECRET_NAME = 'Secret Lisbon Honeymoon';
+    const SESSION_TOKEN = 'session-token-value-xyz';
+
+    it('F2.AC15 logs create, list, not-found and delete with user ID and trip ID only', async () => {
+      const { logger, service } = setup();
+      const trip = await service.create(ALICE, 'Lisbon');
+      await service.list(ALICE);
+      await expect(service.get(BOB, trip.id)).rejects.toMatchObject({ code: 'not_found' });
+      await service.delete(ALICE, trip.id);
+
+      expect(logger.events).toEqual([
+        { action: 'create', userId: ALICE, tripId: trip.id },
+        { action: 'list', userId: ALICE },
+        { action: 'not_found', userId: BOB, tripId: trip.id },
+        { action: 'delete', userId: ALICE, tripId: trip.id },
+      ]);
+    });
+
+    it('F2.AC15 never logs the trip name in any create, list, not-found or delete event', async () => {
+      const { logger, service } = setup();
+      const trip = await service.create(ALICE, SECRET_NAME);
+      await service.list(ALICE);
+      await expect(service.get(BOB, trip.id)).rejects.toMatchObject({ code: 'not_found' });
+      await service.delete(ALICE, trip.id);
+
+      expect(logger.events).toHaveLength(4);
+      expect(JSON.stringify(logger.events)).not.toContain(SECRET_NAME);
+      expect(JSON.stringify(logger.events)).not.toContain('Secret');
+    });
+
+    it('F2.AC15 never logs a session token, because the service receives only the user ID', async () => {
+      const { logger, service } = setup();
+      const trip = await service.create(ALICE, SECRET_NAME);
+      await service.list(ALICE);
+      await service.delete(ALICE, trip.id);
+
+      expect(JSON.stringify(logger.events)).not.toContain(SESSION_TOKEN);
+      for (const event of logger.events) {
+        expect(Object.keys(event).every((key) => ['action', 'userId', 'tripId'].includes(key))).toBe(true);
+      }
+    });
+
+    it('F2.AC15 the Nest adapter writes the trip name to no log line', async () => {
+      const spy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+      try {
+        const adapter = new NestTripLogger();
+        const named = new TripsService(new FakeTripRepository(), adapter);
+        const trip = await named.create(ALICE, SECRET_NAME);
+        await named.list(ALICE);
+        await named.delete(ALICE, trip.id);
+
+        const lines = spy.mock.calls.map((call) => String(call[0]));
+        expect(lines).toHaveLength(3);
+        for (const line of lines) {
+          expect(line).not.toContain(SECRET_NAME);
+          expect(line).not.toContain(SESSION_TOKEN);
+          expect(line).toContain(ALICE);
+        }
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });
