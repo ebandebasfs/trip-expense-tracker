@@ -1,7 +1,13 @@
 import type { PasswordHasher } from './password-hasher';
-import { AuthService, EMAIL_TAKEN_MESSAGE, LOGIN_FAILED_MESSAGE } from './auth.service';
+import {
+  AuthService,
+  DELETE_PASSWORD_WRONG_MESSAGE,
+  EMAIL_TAKEN_MESSAGE,
+  LOGIN_FAILED_MESSAGE,
+} from './auth.service';
 import { hashToken } from './session-token';
 import type { NewSession, SessionRepository } from './session.repository';
+import type { UnitOfWork } from './unit-of-work';
 import {
   DuplicateEmailError,
   type NewUser,
@@ -37,6 +43,37 @@ class FakeSessionRepository implements SessionRepository {
   }
 }
 
+/** Removes every item that matches, in place, so the fake arrays keep their identity. */
+function removeWhere<T>(items: T[], matches: (item: T) => boolean): void {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (matches(items[i])) items.splice(i, 1);
+  }
+}
+
+/**
+ * Fake unit of work over the fake user and session stores. Deleting a user also drops
+ * their sessions, as the Session foreign key does in the database. The real cascade is checked in code review.
+ */
+class FakeUnitOfWork implements UnitOfWork {
+  constructor(
+    private readonly users: FakeUserRepository,
+    private readonly sessions: FakeSessionRepository,
+  ) {}
+
+  async deleteSessionByTokenHash(tokenHash: string): Promise<void> {
+    removeWhere(this.sessions.sessions, (s) => s.tokenHash === tokenHash);
+  }
+
+  async findUserById(userId: string): Promise<UserRecord | null> {
+    return this.users.users.find((user) => user.id === userId) ?? null;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    removeWhere(this.users.users, (user) => user.id === userId);
+    removeWhere(this.sessions.sessions, (s) => s.userId === userId);
+  }
+}
+
 /** Fake hasher: the "hash" is base64 text, so it differs from the password and does not contain it. */
 class FakePasswordHasher implements PasswordHasher {
   private encode(password: string): string {
@@ -60,7 +97,12 @@ describe('AuthService', () => {
   beforeEach(() => {
     users = new FakeUserRepository();
     sessions = new FakeSessionRepository();
-    service = new AuthService(users, sessions, new FakePasswordHasher());
+    service = new AuthService(
+      users,
+      sessions,
+      new FakePasswordHasher(),
+      new FakeUnitOfWork(users, sessions),
+    );
   });
 
   describe('register', () => {
@@ -147,6 +189,81 @@ describe('AuthService', () => {
 
       expect(unknownEmail).toEqual(wrongPassword);
       expect(unknownEmail).toEqual({ ok: false, error: LOGIN_FAILED_MESSAGE, field: null });
+      expect(sessions.sessions).toHaveLength(0);
+    });
+  });
+
+  describe('logout', () => {
+    it('F1.AC9 ends the session for the token, so the old token finds no session', async () => {
+      const first = await service.register('sam@example.com', 'password1');
+      const second = await service.login('sam@example.com', 'password1');
+      expect(first.ok && second.ok).toBe(true);
+      if (!first.ok || !second.ok) return;
+
+      await service.logout(first.token);
+
+      expect(sessions.sessions).toEqual([
+        { userId: users.users[0].id, tokenHash: hashToken(second.token) },
+      ]);
+      expect(sessions.sessions.some((s) => s.tokenHash === hashToken(first.token))).toBe(false);
+    });
+
+    it('F1.AC9 logging out with a token that has no session changes nothing', async () => {
+      await service.register('sam@example.com', 'password1');
+      const before = [...sessions.sessions];
+
+      await service.logout('unknown-token');
+
+      expect(sessions.sessions).toEqual(before);
+    });
+  });
+
+  describe('deleteAccount', () => {
+    let userId: string;
+    let token: string;
+
+    beforeEach(async () => {
+      const result = await service.register('sam@example.com', 'password1');
+      if (!result.ok) throw new Error('setup failed');
+      userId = result.user.id;
+      token = result.token;
+    });
+
+    it('F1.AC12 wrong password returns the message and deletes no user or session', async () => {
+      const usersBefore = [...users.users];
+      const sessionsBefore = [...sessions.sessions];
+
+      const result = await service.deleteAccount(userId, 'wrong-password');
+
+      expect(result).toEqual({
+        ok: false,
+        error: DELETE_PASSWORD_WRONG_MESSAGE,
+        field: 'password',
+      });
+      expect(users.users).toEqual(usersBefore);
+      expect(sessions.sessions).toEqual(sessionsBefore);
+      expect(sessions.sessions.some((s) => s.tokenHash === hashToken(token))).toBe(true);
+    });
+
+    it('F1.AC12 unknown user id returns the same message and deletes nothing', async () => {
+      const sessionsBefore = [...sessions.sessions];
+
+      const result = await service.deleteAccount('no-such-user', 'password1');
+
+      expect(result).toEqual({
+        ok: false,
+        error: DELETE_PASSWORD_WRONG_MESSAGE,
+        field: 'password',
+      });
+      expect(users.users).toHaveLength(1);
+      expect(sessions.sessions).toEqual(sessionsBefore);
+    });
+
+    it('F1.AC12 correct password deletes the user and ends their sessions', async () => {
+      const result = await service.deleteAccount(userId, 'password1');
+
+      expect(result).toEqual({ ok: true });
+      expect(users.users).toHaveLength(0);
       expect(sessions.sessions).toHaveLength(0);
     });
   });
