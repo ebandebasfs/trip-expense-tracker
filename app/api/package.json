@@ -1,0 +1,27 @@
+{
+  "name": "@trip-expense-tracker/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.6.1",
+    "@nestjs/core": "^12.6.1",
+    "@nestjs/platform-express": "^12.6.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^12.0.15",
+    "@nestjs/testing": "^12.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.7",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2"
+  }
+}
