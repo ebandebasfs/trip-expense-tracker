@@ -77,15 +77,21 @@ Two notes for review:
 - **Covers:** F1.R10, F1.AC4 (client), F1.AC5 (client), F1.AC7 (safe post-login path), F1.AC10 (redirect)
 - **Done when:** `npm test -w app/web -- -t "\bF1\.AC(4|5|7|10)\b"` passes.
 
-### F1.T12 Register, log in and Trips placeholder screens
-- **Files:** `app/web/src/components/auth-form.tsx` (new), `app/web/src/components/auth-form.test.tsx` (new), `app/web/src/app/register/page.tsx` (new), `app/web/src/app/login/page.tsx` (new), `app/web/src/app/trips/page.tsx` (new, placeholder until F2), `app/web/next.config.ts` (new, rewrites `/api/:path*` to `http://localhost:3001/:path*`)
-- **Does:** Register and Log in forms follow the spec's Accessibility section: visible labels, `autocomplete` values, `role="alert"` region, focus moves to the first invalid field after a failed submit, Enter submits, loading labels ("Creating account…", "Logging in…") with disabled buttons, email kept and password cleared on failure. Success goes to `/trips`.
+### F1.T12 Current user endpoint
+- **Files:** `app/api/src/auth/auth.controller.ts` (changed), `app/api/src/auth/auth.controller.spec.ts` (changed), `app/api/src/auth/auth.service.ts` (changed), `app/api/src/auth/auth.service.spec.ts` (changed)
+- **Does:** `GET /me`, guarded by `SessionGuard`, returns 200 with the logged-in user's `id` and `email`, and never the password hash. `AuthService.currentUser(userId)` looks the user up with `UnitOfWork.findUserById`; if the user no longer exists it returns null and the controller answers 401 with no data. With no valid session the guard answers 401. The web app uses this to tell whether a visitor is logged in (the session cookie is HttpOnly) and to show the account email (F1.T13, F1.T14).
+- **Covers:** F1.R10, F1.AC10 (no valid session gets 401 and no data)
+- **Done when:** `npm test -w app/api -- -t "\bF1\.AC10\b"` passes.
+
+### F1.T13 Register, log in and Trips placeholder screens
+- **Files:** `app/web/src/components/auth-form.tsx` (new), `app/web/src/components/auth-form.test.tsx` (new), `app/web/src/app/register/page.tsx` (new), `app/web/src/app/login/page.tsx` (new), `app/web/src/app/trips/page.tsx` (new, placeholder until F2), `app/web/next.config.ts` (new, rewrites `/api/:path*` to `http://localhost:3001/:path*`), `app/web/src/lib/api-client.ts` (changed), `app/web/src/lib/api-client.spec.ts` (changed)
+- **Does:** Register and Log in forms follow the spec's Accessibility section: visible labels, `autocomplete` values, `role="alert"` region, focus moves to the first invalid field after a failed submit, Enter submits, loading labels ("Creating account…", "Logging in…") with disabled buttons, email kept and password cleared on failure. Success goes to `/trips`. Adds `me()` to the API client (`GET /api/me`). The Trips placeholder calls `me()` on load, so a logged-out visitor is sent to `/login` by the client's 401 handling. The Register and Log in pages call `me()` on load and go to `/trips` when it succeeds (the logged-in rule in `route-rules`).
 - **Covers:** F1.AC1, F1.AC4, F1.AC5, F1.AC8, F1.R2 (client)
 - **Done when:** `npm test -w app/web -- -t "\bF1\.AC(1|4|5|8)\b"` passes, and `npm run dev -w app/web` lets a person register and log in against the API.
 
-### F1.T13 Account page and header logout
+### F1.T14 Account page and header logout
 - **Files:** `app/web/src/components/header.tsx` (new), `app/web/src/components/header.test.tsx` (new), `app/web/src/components/delete-account-form.tsx` (new), `app/web/src/components/delete-account-form.test.tsx` (new), `app/web/src/app/account/page.tsx` (new), `app/web/src/app/layout.tsx` (changed, mounts the header)
-- **Does:** Header with "Log out" on every logged-in screen (calls `/logout`, then shows the Log in screen) and a link to Account. Account page shows the email and the two-step delete: password field, then the confirmation sentence and "Delete my account" button. Wrong password shows the message and stays on the page. Success goes to Log in with "Your account has been deleted."
+- **Does:** Header with "Log out" on every logged-in screen (calls `/logout`, then shows the Log in screen) and a link to Account. Account page gets the email from `me()` and shows it with the two-step delete: password field, then the confirmation sentence and "Delete my account" button. Wrong password shows the message and stays on the page. Success goes to Log in with "Your account has been deleted."
 - **Covers:** F1.AC9 (web logout), F1.AC12 (wrong password message; the success path has no AC of its own and is tested under F1.AC12)
 - **Done when:** `npm test -w app/web -- -t "\bF1\.AC(9|12)\b"` passes.
 
@@ -140,3 +146,4 @@ Also checked in code review, supporting the rows above: the unique constraint on
 - 2026-11-25: Empty password on Delete account? → Added to F1.T8, which already changes `auth.service.ts`. Reason: the spec's message table has it, but F1.T7 left it out.
 - 2026-11-25: Session lookup and cookie reading for the guard? → F1.T9 also changes the session repository port and adapter, and parses the `Cookie` header itself. F1.T10 wires all auth providers. Reason: found while reviewing F1.T7, so later tasks don't stop on missing files.
 - 2026-11-25: Injection tokens and AuthService wiring? → Tokens live in `auth.tokens.ts`, and `AuthService` takes `@Inject` tokens, both in F1.T10. Reason: `session.guard.ts` imported its token from `auth.module.ts`, which becomes a circular import once the module registers the guard, and Nest cannot inject interface types without tokens.
+- 2026-11-25: How does the web app know who is logged in? → New F1.T12 adds a guarded `GET /me` returning `id` and `email`; the old T12 and T13 become F1.T13 and F1.T14 and use it. Reason: the spec's Account page shows the email and the redirects need the logged-in state, but the cookie is HttpOnly and no endpoint returned the user. Found before T12 started, so no committed task changed its ID.

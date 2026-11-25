@@ -5,7 +5,7 @@ _Status: Approved · Last updated: 2026-11-19 · Spec: [F2-trips.md](../specs/fe
 ## Summary
 This plan adds the trips feature on top of F1 (build order step 2). It adds the `Trip` table, pure name rules and newest-first sorting, a repository with ownership in every query, a service tested with fake repositories, the trip endpoints behind F1's session guard, and the web screens: the Trips page with the new-trip form and list, and the trip page.
 
-Shared work reused from F1, not planned again: the scaffold (F1.T1), the Prisma service and `User` model (F1.T2), the `SessionGuard` that gives `userId` to handlers (F1.T9), the web API client and route rules that send logged-out visitors to Log in (F1.T11). F2.T9 replaces the placeholder Trips page from F1.T12.
+Shared work reused from F1, not planned again: the scaffold (F1.T1), the Prisma service and `User` model (F1.T2), the `SessionGuard` that gives `userId` to handlers (F1.T9), the web API client and route rules that send logged-out visitors to Log in (F1.T11). F2.T9 replaces the placeholder Trips page from F1.T13.
 
 Two notes for review:
 - F2.T2 adds a database migration. A person must read and approve it (project rules).
