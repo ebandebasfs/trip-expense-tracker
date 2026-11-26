@@ -1,6 +1,6 @@
 # F2 — Trips
 
-_Status: Approved · Last updated: 2026-11-25 · Spec: [F2-trips.md](../specs/features/F2-trips.md)_
+_Status: Approved · Last updated: 2026-11-26 · Spec: [F2-trips.md](../specs/features/F2-trips.md)_
 
 ## Summary
 This plan adds the trips feature on top of F1 (build order step 2). It adds the `Trip` table, pure name rules and newest-first sorting, a repository with ownership in every query, a service tested with fake repositories, the trip endpoints behind F1's session guard, and the web screens: the Trips page with the new-trip form and list, and the trip page.
@@ -76,6 +76,12 @@ Two notes for review:
 - **Covers:** F2.R9, F2.AC11
 - **Done when:** `npm test -w app/web -- -t "\bF2\.AC11\b"` passes.
 
+### F2.T11 Restyle F2 screens with shadcn/ui
+- **Files:** `app/web/src/components/new-trip-form.tsx`, `trip-list.tsx` (changed), `app/web/src/app/trips/page.tsx`, `app/web/src/app/trips/[id]/page.tsx` (changed)
+- **Does:** Same rules as F1.T16, using the components from F1.T15: the form in a Card, list rows with the name on the left and Delete on the right, the delete confirmation as a bordered panel, destructive styling on "Delete trip". Presentation only; no test file changes.
+- **Covers:** None (presentation only).
+- **Done when:** `npm test -w app/web` and `npm run build -w app/web` pass with no test changed.
+
 ## AC coverage
 
 Every AC in the spec has one row. Two rows are "code review" (AC10 and AC14). Two more rows, AC11 and AC12, have a unit test and also need a code review check, noted below the table.
@@ -132,3 +138,4 @@ Code review also needed for two unit-tested rows:
 - 2026-11-25: Web validation type and client error check? → `ValidationField` in `app/web/src/lib/validation.ts` adds `'name'`, and the API client's error check accepts `field: "name"` (F2.T7). Reason: without this, a 400 for a bad trip name would reach the form as a generic error.
 - 2026-11-25: Plan approved by the user. Status set to Approved.
 - 2026-11-25: Trips page and logged-out visitors? → F2.T9 replaces F1's placeholder. The page calls `listTrips` on load, and the client's 401 handling sends a logged-out visitor to Log in with no message. The page adds no redirect. Reason: the spec's logged-out flow (flow 6) and F1's route rules already cover this, and one place handles it.
+- 2026-11-26: UI library? → shadcn/ui on Tailwind CSS v4, added as presentation-only tasks after the feature was built. Reason: the specs set behaviour, copy and accessibility but no visual design; adopting it before F3 means later features are built with it from the start.

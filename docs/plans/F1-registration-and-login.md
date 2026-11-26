@@ -1,6 +1,6 @@
 # F1 — Registration and login
 
-_Status: Approved · Last updated: 2026-11-25 · Spec: [F1-registration-and-login.md](../specs/features/F1-registration-and-login.md)_
+_Status: Approved · Last updated: 2026-11-26 · Spec: [F1-registration-and-login.md](../specs/features/F1-registration-and-login.md)_
 
 ## Summary
 This plan scaffolds the monorepo (the app is not built yet), then builds the account feature in layers: the Prisma schema, pure account rules, password and token helpers, the auth service with fake repositories, Prisma adapters, logout and account deletion, the session guard, HTTP endpoints, and finally the web screens. No other feature is started. No shared work is reused from another plan; F1 is the first plan. The session guard built here is the login check that F2 and later features apply to each trip endpoint.
@@ -95,6 +95,18 @@ Two notes for review:
 - **Covers:** F1.AC9 (web logout), F1.AC12 (wrong password message; the success path has no AC of its own and is tested under F1.AC12)
 - **Done when:** `npm test -w app/web -- -t "\bF1\.AC(9|12)\b"` passes.
 
+### F1.T15 shadcn/ui setup
+- **Files:** `app/web/package.json` (changed), `package-lock.json` (changed), `app/web/components.json` (new), `app/web/postcss.config.mjs` (new), `app/web/src/app/globals.css` (new), `app/web/src/app/layout.tsx` (changed, imports globals.css), `app/web/src/lib/utils.ts` (new, `cn` helper), `app/web/src/components/ui/button.tsx`, `input.tsx`, `label.tsx`, `card.tsx` (new, from the shadcn CLI), `CLAUDE.md` (changed)
+- **Does:** Installs Tailwind CSS v4 with `@tailwindcss/postcss` and initialises shadcn/ui in `app/web` with `npx shadcn@latest init` (neutral base colour, CSS variables, the existing `@/*` alias), then adds the button, input, label and card components with `npx shadcn@latest add`. Light theme only. Adds to CLAUDE.md under Stack: "Web UI: shadcn/ui components (in `app/web/src/components/ui/`) on Tailwind CSS v4. Screens use these components and Tailwind classes; labels, roles, aria attributes and copy come from the specs."
+- **Covers:** None (presentation only).
+- **Done when:** `npm test -w app/web` and `npm run build -w app/web` both pass with no test changed.
+
+### F1.T16 Restyle F1 screens with shadcn/ui
+- **Files:** `app/web/src/components/auth-form.tsx`, `header.tsx`, `delete-account-form.tsx` (changed), `app/web/src/app/login/page.tsx`, `register/page.tsx`, `account/page.tsx`, `layout.tsx` (changed)
+- **Does:** Uses the shadcn Button, Input, Label and Card and Tailwind classes for a clean, centred layout that works at phone width. Presentation only: every label text, `id`/`htmlFor` pairing, `role`, `aria-*` attribute, message, button name, focus behaviour and loading label stays exactly as it is. No test file changes.
+- **Covers:** None (presentation only).
+- **Done when:** `npm test -w app/web` and `npm run build -w app/web` pass with no test changed.
+
 ## AC coverage
 
 Every AC in the spec has one row. Unit tests only, per project rules. Two rows are "code review" (AC11 and AC13).
@@ -148,3 +160,4 @@ Also checked in code review, supporting the rows above: the unique constraint on
 - 2026-11-25: Injection tokens and AuthService wiring? → Tokens live in `auth.tokens.ts`, and `AuthService` takes `@Inject` tokens, both in F1.T10. Reason: `session.guard.ts` imported its token from `auth.module.ts`, which becomes a circular import once the module registers the guard, and Nest cannot inject interface types without tokens.
 - 2026-11-25: How does the web app know who is logged in? → New F1.T12 adds a guarded `GET /me` returning `id` and `email`; the old T12 and T13 become F1.T13 and F1.T14 and use it. Reason: the spec's Account page shows the email and the redirects need the logged-in state, but the cookie is HttpOnly and no endpoint returned the user. Found before T12 started, so no committed task changed its ID.
 - 2026-11-25: Where does the "account deleted" message show? → F1.T14 also changes the Log in page, which reads `?deleted=1`. Reason: the message appears on the Log in screen (F1.T13's page), and found before T14 started.
+- 2026-11-26: UI library? → shadcn/ui on Tailwind CSS v4, added as presentation-only tasks after the feature was built. Reason: the specs set behaviour, copy and accessibility but no visual design; adopting it before F3 means later features are built with it from the start.
