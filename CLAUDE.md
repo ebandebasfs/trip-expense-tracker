@@ -7,6 +7,7 @@ Specs: `docs/specs/product.md`, `docs/specs/features/`. Rules: `docs/rules/proje
 - `app/api`: NestJS 12, Prisma 7.10 with SQLite (`@prisma/adapter-better-sqlite3`), Nest `Logger`, Jest 30 + ts-jest.
 - NestJS 12 ships ESM only. The API compiles to CommonJS (`module: commonjs`, `moduleResolution: bundler`) and Node loads Nest through `require(esm)`. Jest needs `NODE_OPTIONS=--experimental-vm-modules` for this, which the API `test` script already sets. Always run tests through `npm test`, never bare `npx jest`.
 - `app/web`: Next.js 16 (App Router), React 19, trip pages are client components, Jest 30 + React Testing Library.
+- Web UI: shadcn/ui components (in `app/web/src/components/ui/`) on Tailwind CSS v4. Screens use these components and Tailwind classes; labels, roles, aria attributes and copy come from the specs.
 - Passwords: `node:crypto` scrypt. Sessions: server-side record, random token in an HttpOnly cookie with no Expires. The DB stores a hash of the token, never the token.
 - Web proxies `/api/*` to the API with `next.config` rewrites, so the cookie stays same-origin.
 
