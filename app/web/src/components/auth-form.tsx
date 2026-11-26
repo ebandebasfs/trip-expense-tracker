@@ -3,6 +3,9 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError, GENERIC_ERROR_MESSAGE } from '../lib/api-client';
 import { validateLogin, validateRegistration, type ValidationField } from '../lib/validation';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 export type AuthMode = 'register' | 'login';
 
@@ -100,10 +103,10 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
     .join(' ');
 
   return (
-    <form noValidate onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor={emailId}>Email</label>
-        <input
+    <form noValidate onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-2">
+        <Label htmlFor={emailId}>Email</Label>
+        <Input
           id={emailId}
           ref={emailRef}
           name="email"
@@ -115,16 +118,20 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
           aria-describedby={emailError ? errorId : undefined}
         />
         {emailError && (
-          <p id={errorId} role="alert">
+          <p id={errorId} role="alert" className="text-sm text-destructive">
             {emailError.message}
           </p>
         )}
       </div>
 
-      <div>
-        <label htmlFor={passwordId}>Password</label>
-        {mode === 'register' && <p id={hintId}>At least 8 characters.</p>}
-        <input
+      <div className="space-y-2">
+        <Label htmlFor={passwordId}>Password</Label>
+        {mode === 'register' && (
+          <p id={hintId} className="text-sm text-muted-foreground">
+            At least 8 characters.
+          </p>
+        )}
+        <Input
           id={passwordId}
           ref={passwordRef}
           name="password"
@@ -136,17 +143,21 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
           aria-describedby={passwordDescribedBy || undefined}
         />
         {passwordError && (
-          <p id={errorId} role="alert">
+          <p id={errorId} role="alert" className="text-sm text-destructive">
             {passwordError.message}
           </p>
         )}
       </div>
 
-      {formError && <p role="alert">{formError.message}</p>}
+      {formError && (
+        <p role="alert" className="text-sm text-destructive">
+          {formError.message}
+        </p>
+      )}
 
-      <button type="submit" disabled={pending}>
+      <Button type="submit" className="w-full" disabled={pending}>
         {pending ? copy.busyLabel : copy.idleLabel}
-      </button>
+      </Button>
     </form>
   );
 }

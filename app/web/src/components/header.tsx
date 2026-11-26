@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ApiError, GENERIC_ERROR_MESSAGE, apiClient, createApiClient, type AuthUser } from '../lib/api-client';
 import { LOGIN_PATH } from '../lib/route-rules';
+import { Button, buttonVariants } from './ui/button';
 
 export const ACCOUNT_PATH = '/account';
 
@@ -77,16 +78,22 @@ export function Header({ client = defaultClient }: HeaderProps) {
   }
 
   return (
-    <header>
+    <header className="mx-auto w-full max-w-md px-4 pt-4">
       {loggedIn && (
-        <nav aria-label="Main">
-          <Link href={ACCOUNT_PATH}>Account</Link>{' '}
-          <button type="button" onClick={logOut} disabled={pending}>
+        <nav aria-label="Main" className="flex items-center justify-end gap-2">
+          <Link href={ACCOUNT_PATH} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            Account
+          </Link>
+          <Button type="button" variant="outline" size="sm" onClick={logOut} disabled={pending}>
             Log out
-          </button>
+          </Button>
         </nav>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </header>
   );
 }

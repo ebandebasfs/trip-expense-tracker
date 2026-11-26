@@ -2,6 +2,9 @@
 
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError, GENERIC_ERROR_MESSAGE } from '../lib/api-client';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 export const EMPTY_PASSWORD_MESSAGE = 'Enter your password to delete your account.';
 export const CONFIRMATION_MESSAGE = 'This deletes your account and every trip in it. This cannot be undone.';
@@ -90,10 +93,10 @@ export function DeleteAccountForm({ deleteAccount, onDeleted }: DeleteAccountFor
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor={passwordId}>Password</label>
-        <input
+    <form noValidate onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-2">
+        <Label htmlFor={passwordId}>Password</Label>
+        <Input
           id={passwordId}
           ref={passwordRef}
           name="password"
@@ -105,20 +108,22 @@ export function DeleteAccountForm({ deleteAccount, onDeleted }: DeleteAccountFor
           aria-describedby={error ? errorId : undefined}
         />
         {error && (
-          <p id={errorId} role="alert">
+          <p id={errorId} role="alert" className="text-sm text-destructive">
             {error}
           </p>
         )}
       </div>
 
       {step === 'enter-password' ? (
-        <button type="submit">Delete account</button>
+        <Button type="submit" variant="destructive" className="w-full">
+          Delete account
+        </Button>
       ) : (
-        <div>
-          <p>{CONFIRMATION_MESSAGE}</p>
-          <button type="button" onClick={confirmDelete} disabled={pending}>
+        <div className="space-y-4">
+          <p className="text-sm text-destructive">{CONFIRMATION_MESSAGE}</p>
+          <Button type="button" variant="destructive" className="w-full" onClick={confirmDelete} disabled={pending}>
             {pending ? 'Deleting…' : 'Delete my account'}
-          </button>
+          </Button>
         </div>
       )}
     </form>

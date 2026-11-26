@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { AuthForm } from '../../components/auth-form';
+import { Card, CardContent } from '../../components/ui/card';
 import { apiClient, createApiClient } from '../../lib/api-client';
 import { LOGIN_PATH, TRIPS_PATH } from '../../lib/route-rules';
 
@@ -26,12 +27,19 @@ export default function RegisterPage() {
   }
 
   return (
-    <main>
-      <h1>Create account</h1>
-      <AuthForm mode="register" onSubmit={register} />
-      <p>
-        Already have an account? <Link href={LOGIN_PATH}>Log in</Link>
-      </p>
+    <main className="mx-auto flex w-full max-w-md flex-col px-4 py-10">
+      <Card className="w-full">
+        <CardContent className="space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
+          <AuthForm mode="register" onSubmit={register} />
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href={LOGIN_PATH} className="font-medium text-primary underline-offset-4 hover:underline">
+              Log in
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </main>
   );
 }
