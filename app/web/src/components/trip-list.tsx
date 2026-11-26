@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { ApiError, type Trip } from '../lib/api-client';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
 
 export const LOADING_TRIPS_MESSAGE = 'Loading your trips…';
 export const EMPTY_TRIPS_MESSAGE = 'You have no trips yet. Create one above to get started.';
@@ -117,71 +119,96 @@ export function TripList({ trips, deleteTrip, onDeleted }: TripListProps) {
   }
 
   return (
-    <section>
-      <h2 ref={headingRef} tabIndex={-1}>
-        Your trips
-      </h2>
+    <Card className="w-full">
+      <CardContent className="space-y-4">
+        <section className="space-y-4">
+          <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold">
+            Your trips
+          </h2>
 
-      {trips === null ? (
-        <p>{LOADING_TRIPS_MESSAGE}</p>
-      ) : trips.length === 0 ? (
-        <p ref={emptyRef} tabIndex={-1}>
-          {EMPTY_TRIPS_MESSAGE}
-        </p>
-      ) : (
-        <ul>
-          {trips.map((trip) => {
-            const isOpen = openId === trip.id;
-            const panelId = `${ids}-panel-${trip.id}`;
-            const messageId = `${ids}-message-${trip.id}`;
-            return (
-              <li key={trip.id}>
-                <Link href={`/trips/${encodeURIComponent(trip.id)}`}>{trip.name}</Link>{' '}
-                <button
-                  type="button"
-                  aria-label={`Delete trip ${trip.name}`}
-                  aria-expanded={isOpen}
-                  aria-controls={isOpen ? panelId : undefined}
-                  ref={(element) => {
-                    if (element) {
-                      triggerRefs.current.set(trip.id, element);
-                    } else {
-                      triggerRefs.current.delete(trip.id);
-                    }
-                  }}
-                  onClick={() => openPanel(trip.id)}
-                >
-                  Delete
-                </button>
+          {trips === null ? (
+            <p className="text-sm text-muted-foreground">{LOADING_TRIPS_MESSAGE}</p>
+          ) : trips.length === 0 ? (
+            <p ref={emptyRef} tabIndex={-1} className="text-sm text-muted-foreground">
+              {EMPTY_TRIPS_MESSAGE}
+            </p>
+          ) : (
+            <ul className="divide-y rounded-lg border">
+              {trips.map((trip) => {
+                const isOpen = openId === trip.id;
+                const panelId = `${ids}-panel-${trip.id}`;
+                const messageId = `${ids}-message-${trip.id}`;
+                return (
+                  <li key={trip.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+                    <Link
+                      href={`/trips/${encodeURIComponent(trip.id)}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      {trip.name}
+                    </Link>{' '}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={`Delete trip ${trip.name}`}
+                      aria-expanded={isOpen}
+                      aria-controls={isOpen ? panelId : undefined}
+                      ref={(element) => {
+                        if (element) {
+                          triggerRefs.current.set(trip.id, element);
+                        } else {
+                          triggerRefs.current.delete(trip.id);
+                        }
+                      }}
+                      onClick={() => openPanel(trip.id)}
+                    >
+                      Delete
+                    </Button>
 
-                {isOpen && (
-                  <div
-                    id={panelId}
-                    ref={panelRef}
-                    tabIndex={-1}
-                    role="group"
-                    aria-labelledby={messageId}
-                    onKeyDown={(event) => handlePanelKeyDown(event, trip.id)}
-                  >
-                    <p id={messageId}>{DELETE_CONFIRMATION_MESSAGE}</p>
-                    {error && <p role="alert">{error}</p>}
-                    <button type="button" onClick={() => closePanel(trip.id)}>
-                      Cancel
-                    </button>{' '}
-                    <button type="button" onClick={() => confirmDelete(trip.id)}>
-                      Delete trip
-                    </button>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                    {isOpen && (
+                      <div
+                        id={panelId}
+                        ref={panelRef}
+                        tabIndex={-1}
+                        role="group"
+                        aria-labelledby={messageId}
+                        onKeyDown={(event) => handlePanelKeyDown(event, trip.id)}
+                        className="w-full space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
+                      >
+                        <p id={messageId} className="text-sm text-destructive">
+                          {DELETE_CONFIRMATION_MESSAGE}
+                        </p>
+                        {error && (
+                          <p role="alert" className="text-sm text-destructive">
+                            {error}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => closePanel(trip.id)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => confirmDelete(trip.id)}
+                          >
+                            Delete trip
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-      <p role="status" aria-live="polite">
-        {status}
-      </p>
-    </section>
+          <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+            {status}
+          </p>
+        </section>
+      </CardContent>
+    </Card>
   );
 }

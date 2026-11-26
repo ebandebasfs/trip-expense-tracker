@@ -8,6 +8,10 @@ import {
   normalizeTripName,
   validateTripName,
 } from '../lib/trip-validation';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 export const TRIP_CREATED_MESSAGE = 'Trip created.';
 export const CREATE_FAILED_MESSAGE = 'Could not create the trip. Try again.';
@@ -88,33 +92,37 @@ export function NewTripForm({ createTrip, onCreated }: NewTripFormProps) {
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor={nameId}>Trip name</label>
-        <input
-          id={nameId}
-          ref={nameRef}
-          name="name"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-        />
-        {error && (
-          <p id={errorId} role="alert">
-            {error}
+    <Card className="w-full">
+      <CardContent>
+        <form noValidate onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor={nameId}>Trip name</Label>
+            <Input
+              id={nameId}
+              ref={nameRef}
+              name="name"
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
+            />
+            {error && (
+              <p id={errorId} role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={pending}>
+            Create trip
+          </Button>
+
+          <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+            {status}
           </p>
-        )}
-      </div>
-
-      <button type="submit" disabled={pending}>
-        Create trip
-      </button>
-
-      <p role="status" aria-live="polite">
-        {status}
-      </p>
-    </form>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

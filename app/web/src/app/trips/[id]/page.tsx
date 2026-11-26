@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Card, CardContent } from '../../../components/ui/card';
+import { buttonVariants } from '../../../components/ui/button';
 import { ApiError, GENERIC_ERROR_MESSAGE, apiClient, type Trip } from '../../../lib/api-client';
 
 const TRIP_NOT_FOUND_MESSAGE = 'This trip could not be found.';
@@ -51,17 +53,27 @@ export default function TripPage() {
   }, [id]);
 
   return (
-    <main>
-      {notFound ? (
-        <p role="alert">{TRIP_NOT_FOUND_MESSAGE}</p>
-      ) : failed ? (
-        <p role="alert">{GENERIC_ERROR_MESSAGE}</p>
-      ) : trip !== null ? (
-        <h1>{trip.name}</h1>
-      ) : null}
-      <p>
-        <Link href="/trips">{BACK_TO_TRIPS_LABEL}</Link>
-      </p>
+    <main className="mx-auto flex w-full max-w-md flex-col px-4 py-10">
+      <Card className="w-full">
+        <CardContent className="space-y-6">
+          {notFound ? (
+            <p role="alert" className="text-sm text-destructive">
+              {TRIP_NOT_FOUND_MESSAGE}
+            </p>
+          ) : failed ? (
+            <p role="alert" className="text-sm text-destructive">
+              {GENERIC_ERROR_MESSAGE}
+            </p>
+          ) : trip !== null ? (
+            <h1 className="text-2xl font-semibold tracking-tight">{trip.name}</h1>
+          ) : null}
+          <p>
+            <Link href="/trips" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+              {BACK_TO_TRIPS_LABEL}
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </main>
   );
 }

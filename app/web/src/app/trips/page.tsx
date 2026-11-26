@@ -25,14 +25,16 @@ export default function TripsPage() {
   }, []);
 
   return (
-    <main>
-      <h1>Trips</h1>
+    <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-10">
+      <h1 className="text-2xl font-semibold tracking-tight">Trips</h1>
       <NewTripForm
         createTrip={(name) => apiClient.createTrip(name)}
         onCreated={(trip) => setTrips((current) => (current === null ? null : [trip, ...current]))}
       />
       {failed ? (
-        <p role="alert">{GENERIC_ERROR_MESSAGE}</p>
+        <p role="alert" className="text-sm text-destructive">
+          {GENERIC_ERROR_MESSAGE}
+        </p>
       ) : (
         <TripList
           trips={trips}
