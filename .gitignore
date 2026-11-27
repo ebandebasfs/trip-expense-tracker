@@ -17,3 +17,13 @@ docs/activities-outputs/session-logs/.hook-errors.log
 *.suo
 .DS_Store
 Thumbs.db
+
+# Dependencies, build output and local databases
+node_modules/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+*.db
+*.db-journal
+next-env.d.ts

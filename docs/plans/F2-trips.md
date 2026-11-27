@@ -1,15 +1,18 @@
 # F2 — Trips
 
-_Status: Approved · Last updated: 2026-11-19 · Spec: [F2-trips.md](../specs/features/F2-trips.md)_
+_Status: Approved · Last updated: 2026-11-26 · Spec: [F2-trips.md](../specs/features/F2-trips.md)_
 
 ## Summary
 This plan adds the trips feature on top of F1 (build order step 2). It adds the `Trip` table, pure name rules and newest-first sorting, a repository with ownership in every query, a service tested with fake repositories, the trip endpoints behind F1's session guard, and the web screens: the Trips page with the new-trip form and list, and the trip page.
 
-Shared work reused from F1, not planned again: the scaffold (F1.T1), the Prisma service and `User` model (F1.T2), the `SessionGuard` that gives `userId` to handlers (F1.T9), the web API client and route rules that send logged-out visitors to Log in (F1.T11). F2.T9 replaces the placeholder Trips page from F1.T12.
+Shared work reused from F1, not planned again: the scaffold (F1.T1), the Prisma service and `User` model (F1.T2), the `SessionGuard` that gives `userId` to handlers (F1.T9), the web API client and route rules that send logged-out visitors to Log in (F1.T11). F2.T9 replaces the placeholder Trips page from F1.T13.
+
+F2 follows F1's wiring. `TripsModule` imports `AuthModule`, which exports `PrismaService` and `SessionGuard` alongside the two repositories. Trip injection tokens live in `trips/trips.tokens.ts`, and `TripsService` takes each dependency through `@Inject(<token>)`, as `AuthService` does. Trip errors keep F1's `{ error, field }` shape, so the web client's 401 rule still works.
 
 Two notes for review:
 - F2.T2 adds a database migration. A person must read and approve it (project rules).
 - F2.AC10 (cascade delete of people, expenses and payments) cannot be checked until F3–F6 add those tables. F2.T2 only sets the cascade from `User`, as F1.AC13 expects.
+- The spec's API section says every error is `{ "error": "<code>" }`. This plan adds `field` to those bodies (see Decisions log). The spec text should be updated with `/spec-feature F2`.
 
 ## Tasks
 
@@ -27,31 +30,31 @@ Two notes for review:
 
 ### F2.T3 Trip repository interface and Prisma adapter
 - **Files:** `app/api/src/trips/trip.repository.ts` (new, interface), `app/api/src/trips/prisma-trip.repository.ts` (new)
-- **Does:** Interface `TripRepository` with `create(userId, name)`, `listByOwner(userId)`, `findByIdForOwner(userId, id)` and `deleteForOwner(userId, id)`, which returns whether a row was removed. The Prisma version uses parameterized calls only. Every read and delete filters on `id` and `userId` together. The list is ordered by `createdAt` descending. A malformed ID matches no row and returns nothing, not an error.
+- **Does:** Interface `TripRepository` with `create(userId, name)`, `listByOwner(userId)`, `findByIdForOwner(userId, id)` and `deleteForOwner(userId, id)`, which returns whether a row was removed. The Prisma class takes `PrismaService` by its class (no token), which `AuthModule` exports (F2.T6). It uses parameterized calls only. Every read and delete filters on `id` and `userId` together. The list is ordered by `createdAt` descending. A malformed ID matches no row and returns nothing, not an error.
 - **Covers:** F2.R8, F2.AC11 (code review of the queries)
 - **Done when:** `npm run build -w app/api` exits 0. Code review checks that each query filters on `userId` (see the coverage table).
 
 ### F2.T4 Trips service with fake repositories
-- **Files:** `app/api/src/trips/trips.service.ts` (new), `app/api/src/trips/trips.service.spec.ts` (new)
-- **Does:** `create`, `list`, `get` and `delete` take the session's user ID. `create` runs `checkTripName`, throws `TripError` with the code on failure, and saves the trip with the session user as owner. `list` returns `id`, `name` and `createdAt` only, newest first. `get` and `delete` throw `not_found` when the repository finds nothing for that owner. `delete` calls the repository once with the trip ID and owner. Tests use an in-memory fake `TripRepository`. Services depend only on the interface.
+- **Files:** `app/api/src/trips/trips.tokens.ts` (new, defines `TRIP_REPOSITORY` and `TRIP_LOGGER`), `app/api/src/trips/trips.service.ts` (new), `app/api/src/trips/trips.service.spec.ts` (new)
+- **Does:** `trips.tokens.ts` holds the two injection tokens, as `auth.tokens.ts` does. `TripsService` is `@Injectable()`, and its repository parameter uses `@Inject(TRIP_REPOSITORY)`. `create`, `list`, `get` and `delete` take the session's user ID. `create` runs `checkTripName`, throws `TripError` with the code on failure, and saves the trip with the session user as owner. `list` returns `id`, `name` and `createdAt` only, newest first. `get` and `delete` throw `TripError` with `not_found` when the repository finds nothing for that owner. `delete` calls the repository once with the trip ID and owner. `TripError` carries the code. Tests use an in-memory fake `TripRepository`. The service depends only on the interface.
 - **Covers:** F2.R1, F2.R2, F2.R3, F2.R5, F2.R6, F2.R7, F2.R9, F2.AC1, F2.AC5, F2.AC6, F2.AC7, F2.AC9, F2.AC11
 - **Done when:** `npm test -w app/api -- -t "\bF2\.AC(1|5|6|7|9|11)\b"` passes.
 
 ### F2.T5 Trip logging without names or tokens
-- **Files:** `app/api/src/trips/trip-logger.ts` (new, port wrapping Nest `Logger`), `app/api/src/trips/trips.service.ts` (changed), `app/api/src/trips/trips.service.spec.ts` (changed)
+- **Files:** `app/api/src/trips/trip-logger.ts` (new, port and `NestTripLogger` wrapping Nest `Logger`), `app/api/src/trips/trips.service.ts` (changed: adds `@Inject(TRIP_LOGGER)` as a constructor parameter), `app/api/src/trips/trips.service.spec.ts` (changed)
 - **Does:** The service logs create, list, not-found and delete events with the user ID and trip ID only. It never logs the trip name or the session token. A fake logger in the test records every call.
 - **Covers:** F2.AC15
 - **Done when:** `npm test -w app/api -- -t "\bF2\.AC15\b"` passes.
 
 ### F2.T6 Trip endpoints behind the session guard
-- **Files:** `app/api/src/trips/trips.controller.ts` (new), `app/api/src/trips/trips.controller.spec.ts` (new), `app/api/src/trips/trips.module.ts` (new, provides `TripRepository` with the Prisma adapter and the service, and uses F1's guard), `app/api/src/app.module.ts` (changed, imports `TripsModule`)
-- **Does:** `@Controller('trips')` with `SessionGuard` on the class, so every route is guarded. Routes: GET `/trips` (200), POST `/trips` (201), GET `/trips/:id` (200), DELETE `/trips/:id` (204). The owner always comes from the guard's `userId`. The body is read for `name` only. `TripError` maps to `{ "error": code }`: 400 for name errors, 404 for `not_found`. No PUT or PATCH route exists, so names cannot change (R10).
+- **Files:** `app/api/src/trips/trips.controller.ts` (new), `app/api/src/trips/trips.controller.spec.ts` (new), `app/api/src/trips/trips.module.ts` (new), `app/api/src/auth/auth.module.ts` (changed: exports `PrismaService` and `SessionGuard` as well as `USER_REPOSITORY` and `SESSION_REPOSITORY`), `app/api/src/app.module.ts` (changed, imports `TripsModule`)
+- **Does:** `TripsModule` imports `AuthModule` and gets `PrismaService` and `SessionGuard` from it. It does not provide `PrismaService` again, so the app keeps one instance. It provides `{ provide: TRIP_REPOSITORY, useClass: PrismaTripRepository }`, `{ provide: TRIP_LOGGER, useClass: NestTripLogger }` and `TripsService`. `TripsController` is `@Controller('trips')` with `@UseGuards(SessionGuard)` on the class, so every route is guarded. Routes: GET `/trips` (200), POST `/trips` (201), GET `/trips/:id` (200), DELETE `/trips/:id` (204). The owner always comes from the guard's `userId`. The body is read for `name` only. Errors map to `{ "error": code, "field": field }`: name errors give 400 with `field: "name"`, and `not_found` gives 404 with `field: null`. No PUT or PATCH route exists, so names cannot change (R10).
 - **Covers:** F2.R5, F2.R8, F2.R10, F2.AC12, F2.AC13
-- **Done when:** `npm test -w app/api -- -t "\bF2\.AC(12|13)\b"` passes.
+- **Done when:** `npm test -w app/api -- -t "\bF2\.AC(12|13)\b"` passes, and `npm run build -w app/api` exits 0.
 
 ### F2.T7 Web name rules and trip API client
-- **Files:** `app/web/src/lib/trip-validation.ts` (new, client mirror of the name rules), `app/web/src/lib/trip-validation.spec.ts` (new), `app/web/src/lib/api-client.ts` (changed: `listTrips`, `createTrip`, `getTrip`, `deleteTrip`), `app/web/src/lib/api-client.spec.ts` (changed)
-- **Does:** The client mirror gives the same messages as the spec for fast feedback. The server result always wins. The trip client methods use `credentials: 'same-origin'` (F1.T11) and return the server's `error` code.
+- **Files:** `app/web/src/lib/trip-validation.ts` (new, client mirror of the name rules), `app/web/src/lib/trip-validation.spec.ts` (new), `app/web/src/lib/validation.ts` (changed: `ValidationField` adds `'name'`), `app/web/src/lib/api-client.ts` (changed: `listTrips`, `createTrip`, `getTrip`, `deleteTrip`; the error check accepts `field: "name"`), `app/web/src/lib/api-client.spec.ts` (changed)
+- **Does:** The client mirror gives the same messages as the spec for fast feedback. The server result always wins. The trip client methods use `credentials: 'same-origin'` (F1.T11) and return the server's `error` code. A 401 with no `field` still sends the visitor to Log in with no message, so the list call needs no extra handling. A 400 with `field: "name"` now reaches the form as an `ApiError` with that field.
 - **Covers:** F2.R2 (client), F2.AC1, F2.AC3, F2.AC4, F2.AC6, F2.AC9, F2.AC11 (client calls)
 - **Done when:** `npm test -w app/web -- -t "\bF2\.AC(1|3|4|6|9|11)\b"` passes.
 
@@ -63,7 +66,7 @@ Two notes for review:
 
 ### F2.T9 Trip list, delete confirmation and Trips page
 - **Files:** `app/web/src/components/trip-list.tsx` (new), `app/web/src/components/trip-list.test.tsx` (new), `app/web/src/app/trips/page.tsx` (changed, replaces F1's placeholder), `app/web/src/app/trips/page.test.tsx` (new)
-- **Does:** While loading, shows "Loading your trips…". With no trips, shows "You have no trips yet. Create one above to get started." Otherwise each row shows the name (a link to `/trips/:id`) and a Delete button named "Delete trip <name>". Delete opens a panel on that row with the confirmation sentence and "Cancel" first, then "Delete trip". The panel takes focus when it opens. Escape closes it. Cancel closes it and sends no request. Confirmed delete removes the row and shows "Trip deleted." A failed delete shows "Could not delete the trip. Try again." and keeps the row. After a delete, focus goes to the list heading, or to the empty-state message if the list is now empty. The Trips page shows the form above the list.
+- **Does:** While loading, shows "Loading your trips…". With no trips, shows "You have no trips yet. Create one above to get started." Otherwise each row shows the name (a link to `/trips/:id`) and a Delete button named "Delete trip <name>". Delete opens a panel on that row with the confirmation sentence and "Cancel" first, then "Delete trip". The panel takes focus when it opens. Escape closes it. Cancel closes it and sends no request. Confirmed delete removes the row and shows "Trip deleted." A failed delete shows "Could not delete the trip. Try again." and keeps the row. After a delete, focus goes to the list heading, or to the empty-state message if the list is now empty. The Trips page shows the form above the list. The page calls `listTrips` on load. If that call fails with a session-expired 401, the api client has already sent the visitor to Log in, so the page shows no message, as F1.T13 does. Any other failure shows the generic message. The page adds no redirect of its own.
 - **Covers:** F2.R6, F2.R7, F2.AC6, F2.AC7, F2.AC8, F2.AC9
 - **Done when:** `npm test -w app/web -- -t "\bF2\.AC(6|7|8|9)\b"` passes.
 
@@ -72,6 +75,12 @@ Two notes for review:
 - **Does:** Loads the trip with GET `/trips/:id` and shows only its name and a "Back to trips" link. On 404 it shows "This trip could not be found." with the same link, which covers both missing trips and other users' trips. Logged-out visitors are redirected by F1's route rules (F1.T11), so this page adds no redirect.
 - **Covers:** F2.R9, F2.AC11
 - **Done when:** `npm test -w app/web -- -t "\bF2\.AC11\b"` passes.
+
+### F2.T11 Restyle F2 screens with shadcn/ui
+- **Files:** `app/web/src/components/new-trip-form.tsx`, `trip-list.tsx` (changed), `app/web/src/app/trips/page.tsx`, `app/web/src/app/trips/[id]/page.tsx` (changed)
+- **Does:** Same rules as F1.T16, using the components from F1.T15: the form in a Card, list rows with the name on the left and Delete on the right, the delete confirmation as a bordered panel, destructive styling on "Delete trip". Presentation only; no test file changes.
+- **Covers:** None (presentation only).
+- **Done when:** `npm test -w app/web` and `npm run build -w app/web` pass with no test changed.
 
 ## AC coverage
 
@@ -122,3 +131,11 @@ Code review also needed for two unit-tested rows:
 - 2026-11-19: Trip page content and route? → Name and "Back to trips" only, from GET `/trips/:id`. Reason: spec open question, approved as name only (2026-11-17).
 - 2026-11-19: Plan drafted from the approved spec.
 - 2026-11-19: Plan approved by the user. Status set to Approved.
+- 2026-11-25: Plan back to Draft. Reason: F1 is built, and the changes below alter tasks and files, so the plan needs approval again.
+- 2026-11-25: Module wiring? → `AuthModule` also exports `PrismaService` and `SessionGuard` (F2.T6). `TripsModule` imports `AuthModule` and does not provide `PrismaService` again. Reason: `TripsModule` needs both, and one `PrismaService` instance is shared. The guard is instantiated in `TripsModule`'s context and needs `SESSION_REPOSITORY`, which `AuthModule` already exports.
+- 2026-11-25: Injection tokens for trips? → `TRIP_REPOSITORY` and `TRIP_LOGGER` live in `app/api/src/trips/trips.tokens.ts` (F2.T4). `TripsService` is `@Injectable()` with `@Inject(<token>)` on each constructor parameter, and the module file has no tokens. Reason: the F1.T10 pattern, which avoids circular imports between the module and the guard.
+- 2026-11-25: Trip error shape? → Trip errors use F1's `{ "error", "field" }` shape. Name errors return 400 with `field: "name"`, and `not_found` returns 404 with `field: null`. Reason: the web client treats a 401 with no `field` as "not logged in", and that rule must keep working. The spec's API section still shows `{ "error" }` alone. The field is an addition with no change to copy or behaviour, but the spec text should be updated through `/spec-feature F2`.
+- 2026-11-25: Web validation type and client error check? → `ValidationField` in `app/web/src/lib/validation.ts` adds `'name'`, and the API client's error check accepts `field: "name"` (F2.T7). Reason: without this, a 400 for a bad trip name would reach the form as a generic error.
+- 2026-11-25: Plan approved by the user. Status set to Approved.
+- 2026-11-25: Trips page and logged-out visitors? → F2.T9 replaces F1's placeholder. The page calls `listTrips` on load, and the client's 401 handling sends a logged-out visitor to Log in with no message. The page adds no redirect. Reason: the spec's logged-out flow (flow 6) and F1's route rules already cover this, and one place handles it.
+- 2026-11-26: UI library? → shadcn/ui on Tailwind CSS v4, added as presentation-only tasks after the feature was built. Reason: the specs set behaviour, copy and accessibility but no visual design; adopting it before F3 means later features are built with it from the start.
